@@ -144,6 +144,7 @@ public class MapBuilderController : MonoBehaviour
                 root.name = "Quasar";
                 AddClickCircle(root);
                 BlackHoleController quasar = CreateGravityVisual(root, Color.white, Color.white);
+                root.AddComponent<QuasarController>();
                 root.AddComponent<MapQuasar>();
                 quasar.SetGravity(true);
                 editable.Configure(MapEditableObject.ObjectType.Quasar, quasar);
@@ -1057,7 +1058,11 @@ public class MapQuasar : MonoBehaviour
 
     private void SetAlwaysOnLook()
     {
-        if (source != null) source.SetGravity(true);
+        if (source != null)
+        {
+            source.SetSwitchable(false);
+            source.SetGravity(true);
+        }
         if (core != null) core.color = Color.white;
         if (halo != null) halo.color = new Color(1f, 1f, 1f, 0.46f);
     }

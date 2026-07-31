@@ -4,6 +4,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 
 public class GameManager : MonoBehaviour
@@ -61,6 +62,8 @@ public class GameManager : MonoBehaviour
     private int deliveries;
     private int misses;
     private bool finished;
+    private readonly Collider2D[] holeClickResults = new Collider2D[32];
+    private readonly List<RaycastResult> uiRaycastResults = new List<RaycastResult>();
 
     private void Awake()
     {
@@ -115,7 +118,7 @@ public class GameManager : MonoBehaviour
         Vector2 referencePoint = activeStar != null
             ? activeStar.transform.position
             : launchPoint != null ? launchPoint.position : Vector2.zero;
-        BlackHoleController closestHole = BlackHoleController.GetClosestTo(referencePoint);
+        BlackHoleController closestHole = BlackHoleController.GetClosestTo(referencePoint, true);
         if (closestHole != null)
         {
             closestHole.ToggleGravity();
@@ -126,17 +129,71 @@ public class GameManager : MonoBehaviour
     private void HandleIndividualHoleClick()
     {
         if (!Input.GetMouseButtonDown(0) || mainCamera == null) return;
-        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
+        if (IsPointerOverInteractiveUi()) return;
 
         Vector2 worldPosition = mainCamera.ScreenToWorldPoint(Input.mousePosition);
-        Collider2D hit = Physics2D.OverlapPoint(worldPosition);
-        if (hit == null) return;
-
-        BlackHoleController hole = hit.GetComponentInParent<BlackHoleController>();
+        BlackHoleController hole = FindSwitchableHoleAt(worldPosition);
         if (hole == null) return;
 
         hole.ToggleGravity();
         RefreshUI();
+    }
+
+    private BlackHoleController FindSwitchableHoleAt(Vector2 worldPosition)
+    {
+        ContactFilter2D filter = new ContactFilter2D();
+        filter.useLayerMask = false;
+        filter.useDepth = false;
+        filter.useTriggers = true;
+        int hitCount = Physics2D.OverlapPoint(worldPosition, filter, holeClickResults);
+
+        BlackHoleController closestHit = null;
+        float closestDistanceSqr = float.PositiveInfinity;
+
+        for (int i = 0; i < hitCount; i++)
+        {
+            Collider2D hit = holeClickResults[i];
+            if (hit == null) continue;
+
+            BlackHoleController hole = hit.GetComponentInParent<BlackHoleController>();
+            if (hole == null || !hole.IsSwitchable) continue;
+
+            float distanceSqr = ((Vector2)hole.transform.position - worldPosition).sqrMagnitude;
+            if (distanceSqr >= closestDistanceSqr) continue;
+
+            closestDistanceSqr = distanceSqr;
+            closestHit = hole;
+        }
+
+        if (closestHit != null) return closestHit;
+
+        // Supports previously made black-hole prefabs even if they did not yet
+        // have a collider at the time the level was saved.
+        BlackHoleController closestHole = BlackHoleController.GetClosestTo(worldPosition, true);
+        return closestHole != null && closestHole.IsInsideClickRadius(worldPosition)
+            ? closestHole
+            : null;
+    }
+
+    private bool IsPointerOverInteractiveUi()
+    {
+        if (EventSystem.current == null) return false;
+
+        PointerEventData pointer = new PointerEventData(EventSystem.current)
+        {
+            position = Input.mousePosition
+        };
+
+        uiRaycastResults.Clear();
+        EventSystem.current.RaycastAll(pointer, uiRaycastResults);
+
+        foreach (RaycastResult result in uiRaycastResults)
+        {
+            if (result.gameObject.GetComponentInParent<Selectable>() != null)
+                return true;
+        }
+
+        return false;
     }
 
     private IEnumerator LaunchNextStar()
@@ -304,7 +361,7 @@ public class GameManager : MonoBehaviour
                 Vector2 referencePoint = activeStar != null
                     ? activeStar.transform.position
                     : launchPoint != null ? launchPoint.position : Vector2.zero;
-                BlackHoleController closestHole = BlackHoleController.GetClosestTo(referencePoint);
+                BlackHoleController closestHole = BlackHoleController.GetClosestTo(referencePoint, true);
 
                 gravityButtonText.text = closestHole == null
                     ? "TOGGLE NEAREST HOLE"
@@ -312,7 +369,7 @@ public class GameManager : MonoBehaviour
             }
             else
             {
-                gravityButtonText.text = BlackHoleController.AnyGravityEnabled ? "Active" : "Disabled";
+                gravityButtonText.text = BlackHoleController.AnySwitchableGravityEnabled ? "Active" : "Disabled";
             }
         }
         if (statusText != null && activeStar != null)

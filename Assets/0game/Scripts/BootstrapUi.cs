@@ -41,6 +41,10 @@ public class BootstrapUi : MonoBehaviour
         CreateBlackHole(holes, "BlackHole_IceMinimal", new Vector2(6f, 2.8f), circle,
             new Color(0.68f, 0.92f, 1f), 1.1f, 1);
 
+        Transform specialEntities = CreateGroup("Special_Entities", root.transform);
+        CreateQuasar(specialEntities, "Quasar_AlwaysOn", new Vector2(-4.3f, 5.3f), circle, glow);
+        CreateNebula(specialEntities, "Nebula_ChromaticBarrier", new Vector2(3.5f, 5.3f), glow);
+
         Transform portals = CreateGroup("Portals", root.transform);
         CreatePortal(portals, "Portal_Cyan", new Vector2(-6f, -1.4f), circle, glow,
             new Color(0.1f, 0.83f, 1f), 0);
@@ -102,6 +106,79 @@ public class BootstrapUi : MonoBehaviour
             CreateSpriteObject("AccretionRing_" + (i + 1), hole.transform, Vector2.zero, circle,
                 WithAlpha(glow, 0.12f - i * 0.025f), Vector3.one * size, sortingLayerOrder + 1 - i);
         }
+    }
+
+    private void CreateQuasar(Transform parent, string objectName, Vector2 position, Sprite circle, Sprite glow)
+    {
+        GameObject quasar = new GameObject(objectName);
+        Undo.RegisterCreatedObjectUndo(quasar, "Create quasar");
+        quasar.transform.SetParent(parent, false);
+        quasar.transform.localPosition = position;
+
+        CircleCollider2D collider = quasar.AddComponent<CircleCollider2D>();
+        collider.isTrigger = true;
+        collider.radius = 0.46f;
+
+        // The visual children are created before the controller, so the script
+        // finds Core, Halo, AccretionRing, JetTop and JetBottom automatically.
+        CreateSpriteObject("OuterGlow", quasar.transform, Vector2.zero, glow,
+            new Color(0.18f, 0.78f, 1f, 0.18f), Vector3.one * 3.1f, sortingLayerOrder);
+        CreateSpriteObject("Halo", quasar.transform, Vector2.zero, glow,
+            new Color(0.44f, 0.9f, 1f, 0.42f), Vector3.one * 2.15f, sortingLayerOrder + 1);
+        CreateSpriteObject("AccretionRing", quasar.transform, Vector2.zero, circle,
+            new Color(0.58f, 0.94f, 1f, 0.9f), new Vector3(1.55f, 0.72f, 1f), sortingLayerOrder + 4);
+        CreateSpriteObject("Core", quasar.transform, Vector2.zero, circle,
+            Color.white, Vector3.one * 0.78f, sortingLayerOrder + 5);
+        CreateSpriteObject("JetTop", quasar.transform, new Vector2(0f, 1.02f), glow,
+            new Color(0.45f, 0.88f, 1f, 0.42f), new Vector3(0.25f, 2.5f, 1f), sortingLayerOrder + 2);
+        CreateSpriteObject("JetBottom", quasar.transform, new Vector2(0f, -1.02f), glow,
+            new Color(0.45f, 0.88f, 1f, 0.42f), new Vector3(0.25f, 2.5f, 1f), sortingLayerOrder + 2);
+
+        if (!addGameplayComponents) return;
+
+        BlackHoleController gravity = quasar.AddComponent<BlackHoleController>();
+        gravity.gravityStrength = 30f;
+        gravity.softening = 0.34f;
+        gravity.swallowRadius = 0.45f;
+        quasar.AddComponent<QuasarController>();
+    }
+
+    private void CreateNebula(Transform parent, string objectName, Vector2 position, Sprite glow)
+    {
+        GameObject nebula = new GameObject(objectName);
+        Undo.RegisterCreatedObjectUndo(nebula, "Create nebula");
+        nebula.transform.SetParent(parent, false);
+        nebula.transform.localPosition = position;
+
+        BoxCollider2D collider = nebula.AddComponent<BoxCollider2D>();
+        collider.isTrigger = false;
+        collider.size = new Vector2(3.4f, 1.7f);
+
+        // Offset translucent cloud layers make the silhouette irregular. The
+        // NebulaObstacle script animates each layer with a different phase,
+        // cycling cyan, violet, pink, orange and green at runtime.
+        CreateNebulaCloud(nebula.transform, "Cloud_Cyan", glow, new Vector2(-0.6f, 0.1f),
+            new Vector3(2.55f, 1.18f, 1f), -14f, new Color(0.1f, 0.86f, 1f, 0.42f), 1);
+        CreateNebulaCloud(nebula.transform, "Cloud_Violet", glow, new Vector2(0.28f, 0.28f),
+            new Vector3(2.3f, 1.32f, 1f), 18f, new Color(0.55f, 0.24f, 1f, 0.38f), 2);
+        CreateNebulaCloud(nebula.transform, "Cloud_Pink", glow, new Vector2(0.78f, -0.15f),
+            new Vector3(2.1f, 1.08f, 1f), -28f, new Color(1f, 0.18f, 0.62f, 0.36f), 3);
+        CreateNebulaCloud(nebula.transform, "Cloud_Gold", glow, new Vector2(-0.1f, -0.42f),
+            new Vector3(1.8f, 0.9f, 1f), 37f, new Color(1f, 0.58f, 0.13f, 0.3f), 4);
+        CreateNebulaCloud(nebula.transform, "Cloud_Mint", glow, new Vector2(-1.05f, -0.26f),
+            new Vector3(1.65f, 0.84f, 1f), -44f, new Color(0.25f, 1f, 0.72f, 0.32f), 5);
+        CreateNebulaCloud(nebula.transform, "Cloud_Core", glow, new Vector2(0.1f, 0.03f),
+            new Vector3(1.35f, 0.64f, 1f), 0f, new Color(0.92f, 0.92f, 1f, 0.34f), 6);
+
+        if (addGameplayComponents) nebula.AddComponent<NebulaObstacle>();
+    }
+
+    private void CreateNebulaCloud(Transform parent, string objectName, Sprite glow, Vector2 position,
+        Vector3 scale, float angle, Color color, int orderOffset)
+    {
+        GameObject cloud = CreateSpriteObject(objectName, parent, position, glow, color,
+            scale, sortingLayerOrder + orderOffset);
+        cloud.transform.localRotation = Quaternion.Euler(0f, 0f, angle);
     }
 
     private void CreatePortal(Transform parent, string objectName, Vector2 position, Sprite circle, Sprite glow,

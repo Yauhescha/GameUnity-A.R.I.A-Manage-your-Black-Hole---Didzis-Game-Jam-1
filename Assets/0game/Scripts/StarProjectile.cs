@@ -68,6 +68,12 @@ public class StarProjectile : MonoBehaviour
         else Fail("WRONG PORTAL");
     }
 
+    /// <summary>Called by level hazards such as nebulae.</summary>
+    public void DestroyByHazard(string reason = "DESTROYED")
+    {
+        if (!resolved) Fail(reason);
+    }
+
     private void Deliver()
     {
         resolved = true;

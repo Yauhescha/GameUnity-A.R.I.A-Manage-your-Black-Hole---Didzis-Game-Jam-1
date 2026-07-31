@@ -12,11 +12,38 @@ EditorBuildSettings:
     path: Assets/Scenes/Prolog.unity
     guid: 7598f637205291f4499e662af88a8b79
   - enabled: 1
+    path: Assets/Scenes/Creation.unity
+    guid: 9b8b4e3eb4c1d594b976bc9570df00d4
+  - enabled: 1
     path: Assets/Scenes/Level1.unity
     guid: 8c9cfa26abfee488c85f1582747f6a02
   - enabled: 1
-    path: Assets/Scenes/Creation.unity
-    guid: 9b8b4e3eb4c1d594b976bc9570df00d4
+    path: Assets/Scenes/Level2.unity
+    guid: ee01e83003574924086698707532378c
+  - enabled: 1
+    path: Assets/Scenes/Level3.unity
+    guid: 8efe7639d9952db419b7ef3f7774eee7
+  - enabled: 1
+    path: Assets/Scenes/Level4.unity
+    guid: 48b5b85b4b35c274791702a3deb6ee46
+  - enabled: 1
+    path: Assets/Scenes/Level5.unity
+    guid: d3cec330e675ee2449730109bbf2b037
+  - enabled: 1
+    path: Assets/Scenes/Level6.unity
+    guid: 79e0c94e78aa90e46b5e34631eb321d1
+  - enabled: 1
+    path: Assets/Scenes/Level7.unity
+    guid: d2cc91a05915dfd43883c56dc580f7f4
+  - enabled: 1
+    path: Assets/Scenes/Level8.unity
+    guid: 169a4ca23e50475458d9af6922706db1
+  - enabled: 1
+    path: Assets/Scenes/Level9.unity
+    guid: ba0bbb603c4dd83488fc6981353ef71f
+  - enabled: 1
+    path: Assets/Scenes/Level10.unity
+    guid: 8ec9b1362fd32234dad826faeecb0b1f
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   m_UseUCBPForAssetBundles: 0

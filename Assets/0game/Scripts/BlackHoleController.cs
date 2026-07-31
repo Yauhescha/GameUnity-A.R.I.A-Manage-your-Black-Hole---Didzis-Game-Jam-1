@@ -10,7 +10,13 @@ public class BlackHoleController : MonoBehaviour
     [Min(0.01f)] public float gravityStrength = 24f;
     [Min(0.01f)] public float softening = 0.3f;
     [Min(0.01f)] public float swallowRadius = 0.42f;
+    [Tooltip("False for a quasar: it still attracts and swallows stars, but player controls cannot switch it off.")]
+    [SerializeField] private bool isSwitchable = true;
+    [Header("Interaction")]
+    [Tooltip("Fallback click radius used when a prefab has no 2D collider yet.")]
+    [SerializeField, Min(0.1f)] private float clickRadius = 0.7f;
     public bool GravityEnabled { get; private set; }
+    public bool IsSwitchable => isSwitchable;
 
     [Header("Look")]
     [SerializeField] private SpriteRenderer coreRenderer;
@@ -29,12 +35,23 @@ public class BlackHoleController : MonoBehaviour
         }
     }
 
+    public static bool AnySwitchableGravityEnabled
+    {
+        get
+        {
+            foreach (BlackHoleController hole in activeHoles)
+                if (hole != null && hole.IsSwitchable && hole.GravityEnabled) return true;
+            return false;
+        }
+    }
+
     public static int ActiveHoleCount => activeHoles.Count;
 
     private Vector3 coreScale;
 
     private void Awake()
     {
+        EnsureClickCollider();
         if (coreRenderer == null) coreRenderer = GetComponent<SpriteRenderer>();
         if (halo == null)
         {
@@ -72,7 +89,20 @@ public class BlackHoleController : MonoBehaviour
             haloRenderer.color = enabled ? enabledHalo : disabledHalo;
     }
 
-    public void ToggleGravity() => SetGravity(!GravityEnabled);
+    public void SetSwitchable(bool value) => isSwitchable = value;
+
+    public void ToggleGravity()
+    {
+        if (isSwitchable) SetGravity(!GravityEnabled);
+    }
+
+    public bool IsInsideClickRadius(Vector2 worldPosition)
+    {
+        float scaledRadius = clickRadius * Mathf.Max(
+            Mathf.Abs(transform.lossyScale.x),
+            Mathf.Abs(transform.lossyScale.y));
+        return ((Vector2)transform.position - worldPosition).sqrMagnitude <= scaledRadius * scaledRadius;
+    }
 
     public Vector2 GetAcceleration(Vector2 worldPosition)
     {
@@ -85,18 +115,18 @@ public class BlackHoleController : MonoBehaviour
 
     public static void ToggleAllGravity()
     {
-        SetAllGravity(!AnyGravityEnabled);
+        SetAllGravity(!AnySwitchableGravityEnabled);
         GameManager.Instance?.RefreshUI();
     }
 
-    public static BlackHoleController GetClosestTo(Vector2 worldPosition)
+    public static BlackHoleController GetClosestTo(Vector2 worldPosition, bool onlySwitchable = false)
     {
         BlackHoleController closest = null;
         float closestDistanceSqr = float.PositiveInfinity;
 
         foreach (BlackHoleController hole in activeHoles)
         {
-            if (hole == null) continue;
+            if (hole == null || (onlySwitchable && !hole.IsSwitchable)) continue;
             float distanceSqr = ((Vector2)hole.transform.position - worldPosition).sqrMagnitude;
             if (distanceSqr >= closestDistanceSqr) continue;
 
@@ -110,7 +140,7 @@ public class BlackHoleController : MonoBehaviour
     public static void SetAllGravity(bool enabled)
     {
         foreach (BlackHoleController hole in activeHoles)
-            if (hole != null) hole.SetGravity(enabled);
+            if (hole != null && hole.IsSwitchable) hole.SetGravity(enabled);
     }
 
     public static Vector2 GetCombinedAcceleration(Vector2 worldPosition)
@@ -135,5 +165,14 @@ public class BlackHoleController : MonoBehaviour
     {
         Gizmos.color = new Color(1f, 0.25f, 0.25f, 0.85f);
         Gizmos.DrawWireSphere(transform.position, swallowRadius);
+    }
+
+    private void EnsureClickCollider()
+    {
+        if (GetComponent<Collider2D>() != null) return;
+
+        CircleCollider2D clickCollider = gameObject.AddComponent<CircleCollider2D>();
+        clickCollider.isTrigger = true;
+        clickCollider.radius = clickRadius;
     }
 }
